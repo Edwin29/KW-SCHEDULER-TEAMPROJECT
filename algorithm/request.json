@@ -1,0 +1,16 @@
+{
+  "recommendation": {
+    "catalogPath": "../data/output/courses_2026_1.json",
+    "deptCode": "I040",
+    "selectedCourseNames": ["객체지향프로그래밍","데이터베이스","컴퓨터그래픽스"],
+    "minCredit": 9,
+    "maxCredit": 19,
+    "avoidFirstPeriod": true,
+    "dayOff": "",
+    "emptySlots": []
+  },
+  "selection": {
+    "scheduleId": "SKEL-1",
+    "addedCourseCodes": ["I040-2-8481-01"]
+  }
+}

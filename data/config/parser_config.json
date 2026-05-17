@@ -1,0 +1,18 @@
+{
+    "2026": {
+        "1": {
+            "timetable_start": 129,
+            "timetable_end": 188
+        },
+        "2": {  
+            "timetable_start": 134,
+            "timetable_end": 195
+        }
+    },
+    "2027": {
+        "1": {
+            "timetable_start": 130,
+            "timetable_end": 189
+        }
+    }
+}
