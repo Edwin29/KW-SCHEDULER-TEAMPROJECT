@@ -232,14 +232,59 @@ def show_academic_info_page():
                     return st.selectbox(label, options, key=key, label_visibility="collapsed")
 
             COLLEGE_DEPT_MAP = {
-                "선택안함": {"선택안함": ""},
-                "전자정보공과대학": {"전자공학과":"I020","전자통신공학과":"I021","전자융합공학과":"I022","전기공학과":"I023","전자재료공학과":"I024"},
-                "인공지능융합대학": {"소프트웨어학부":"I040","컴퓨터정보공학부":"I041","정보융합학부":"I042","인공지능학부":"I043","로봇학부":"I025"},
-                "공과대학": {"건축공학과":"I030","건축학과":"I031","화학공학과":"I032","환경공학과":"I033"},
-                "자연과학대학": {"수학과":"I050","전자바이오물리학과":"I051","화학과":"I052","스포츠융합과학과":"I053","정보콘텐츠학과":"5080"},
-                "인문사회과학대학": {"국어국문학과":"I060","영어산업학과":"I061","미디어커뮤니케이션학부":"I062","산업심리학과":"I063","동북아문화산업학부":"I064"},
-                "정책법학대학": {"행정학과":"I070","법학부":"I071","국제학부":"I072"},
-                "경영대학": {"경영학부":"I080","국제통상학부":"I081"}
+                "선택안함": {
+                    "선택안함": ""
+                },
+
+                "전자정보공과대학": {
+                    "전자공학과": "7060",
+                    "전자통신공학과": "7070",
+                    "전자융합공학과": "7420",
+                    "전기공학과": "7320",
+                    "전자재료공학과": "7340"
+                },
+
+                "인공지능융합대학": {
+                    "소프트웨어학부": "I030",
+                    "컴퓨터정보공학부": "I020",
+                    "정보융합학부": "I040",
+                    "인공지능학부": "I043",
+                    "로봇학부": "I050"
+                },
+
+                "공과대학": {
+                    "건축공학과": "1170",
+                    "건축학과": "1270",
+                    "화학공학과": "1140",
+                    "환경공학과": "1160"
+                },
+
+                "자연과학대학": {
+                    "수학과": "6030",
+                    "전자바이오물리학과": "6100",
+                    "화학과": "6050",
+                    "스포츠융합과학과": "6130",
+                    "정보콘텐츠학과": "6120"
+                },
+
+                "인문사회과학대학": {
+                    "국어국문학과": "3040",
+                    "영어산업학과": "3220",
+                    "미디어커뮤니케이션학부": "3230",
+                    "산업심리학과": "3110",
+                    "동북아문화산업학부": "3210"
+                },
+
+                "정책법학대학": {
+                    "행정학과": "F020",
+                    "법학부": "F030",
+                    "국제학부": "F040"
+                },
+
+                "경영대학": {
+                    "경영학부": "5080",
+                    "국제통상학부": "5100"
+                }
             }
             all_depts = ["해당없음"]
             for depts in COLLEGE_DEPT_MAP.values():
@@ -355,14 +400,14 @@ def show_main_schedule_page():
                     with tab:
                         skeleton = st.session_state.skeleton_options[i]
                         sid = skeleton.get('scheduleId', f'SKEL-{i+1}')
-                        tc = skeleton.get('totalCredit', 0)
+                        added_courses = st.session_state.added_courses.get(sid, [])
+                        tc = skeleton.get('totalCredit', 0) + sum(c.get('credit', 0) for c in added_courses)
                         mc = skeleton.get('majorCredit', 0)
                         sc = skeleton.get('satisfiedCount', 0)
 
                         st.caption(f"총 {tc}학점 / 목표 {min_credit}~{max_credit}학점 | 전공 {mc}학점 | 만족 제약 {sc}개")
 
                         # 시간표 그리드
-                        added_courses = st.session_state.added_courses.get(sid, [])
                         render_timetable_grid(skeleton.get('courses', []) + added_courses)
 
                         # 담은 과목 목록
@@ -386,15 +431,32 @@ def show_main_schedule_page():
                         st.markdown("<div class='card-header'>추천과목 (빈 시간 채움)</div>", unsafe_allow_html=True)
 
                         current_filler = st.session_state.skeleton_filler_map.get(sid, [])
-                        majors, double_minors, all_liberals = [], [], []
+
+                        # 중복 추천과목 제거: 같은 학정번호(courseCode)가 여러 번 들어오면 첫 번째만 사용
+                        seen_codes = set()
+                        unique_fillers = []
+
                         for filler in current_filler:
+                            code = filler.get('courseCode') or filler.get('학정번호') or filler.get('courseName') or filler.get('과목명')
+                            if code in seen_codes:
+                                continue
+                            seen_codes.add(code)
+                            unique_fillers.append(filler)
+
+                        majors, double_minors, all_liberals = [], [], []
+
+                        for filler in unique_fillers:
                             cat = filler.get('category', '')
-                            if cat == '전공':        majors.append(filler)
-                            elif cat == '타전공':    double_minors.append(filler)
-                            elif cat == '교양':      all_liberals.append(filler)
+                            if cat == '전공':
+                                majors.append(filler)
+                            elif cat == '타전공':
+                                double_minors.append(filler)
+                            elif cat == '교양':
+                                all_liberals.append(filler)
+
                         all_fillers = majors + double_minors + all_liberals
 
-                        def render_filler_card(filler, _sid):
+                        def render_filler_card(filler, _sid, _idx):
                             cat  = filler.get('category', '과목')
                             name = filler.get('courseName', filler.get('과목명', '과목명'))
                             crd  = filler.get('credit',     filler.get('학점', 3))
@@ -448,15 +510,24 @@ def show_main_schedule_page():
                             )
                             already_added = name in added_names
                             course_code = filler.get('courseCode', name)
+                            button_key = f"add_{_sid}_{current_page}_{_idx}_{course_code}"
                             if already_added:
-                                st.button("✓ 담김", key=f"add_{_sid}_{course_code}", disabled=True, use_container_width=True)
+                                st.button("✓ 담김", key=button_key, disabled=True, use_container_width=True)
                             elif conflict:
-                                st.button("⚠ 시간 충돌", key=f"add_{_sid}_{course_code}", disabled=True, use_container_width=True)
+                                st.button("⚠ 시간 충돌", key=button_key, disabled=True, use_container_width=True)
                             else:
-                                if st.button("+ 담기", key=f"add_{_sid}_{course_code}", use_container_width=True):
-                                    st.session_state.added_courses.setdefault(_sid, []).append(filler)
-                                    st.rerun()
-
+                                if st.button("+ 담기", key=button_key, use_container_width=True):
+                                    added = st.session_state.added_courses.get(_sid, [])
+                                    added_credit = sum(c.get('credit', 0) for c in added)
+                                    skeleton_credit = next(
+                                        (s.get('totalCredit', 0) for s in st.session_state.skeleton_options
+                                        if s.get('scheduleId') == _sid), 0
+                                    )
+                                    if skeleton_credit + added_credit + crd > max_credit:
+                                        st.warning(f"최대 학점({max_credit}학점)을 초과합니다.")
+                                    else:
+                                        st.session_state.added_courses.setdefault(_sid, []).append(filler)
+                                        st.rerun()
                         # 페이지네이션
                         PAGE_SIZE = 5
                         page_key = f"filler_page_{sid}"
@@ -470,7 +541,8 @@ def show_main_schedule_page():
                             f_cols = st.columns(min(len(page_fillers), 5))
                             for f_idx, f in enumerate(page_fillers):
                                 with f_cols[f_idx]:
-                                    render_filler_card(f, sid)
+                                    global_idx = current_page * PAGE_SIZE + f_idx
+                                    render_filler_card(f, sid, global_idx)
                         else:
                             st.markdown(
                                 "<div style='color:#888;font-size:0.85em;margin-top:5px;padding:5px;'>"
@@ -510,7 +582,8 @@ def _call_java(payload: dict) -> dict | None:
                 out_str = out_str[start_idx:]
             return json.loads(out_str)
         return None
-    except Exception:
+    except Exception as e:
+        st.error(f"Java 백엔드 호출 중 오류가 발생했습니다: {e}")
         return None
 
 def run_backend_recommendation(min_c, max_c, max_first_period, day_off, courses, empty_slots_payload):
@@ -593,7 +666,8 @@ def render_timetable_grid(courses):
     html += "</table>"
 
     blocks_html = ""
-    colors = ["#FBF2DA","#F8FF96","#CFAAEE","#8DB1EF","#85D8C7","#FBFDDD","#A33E43"]
+    ##colors = ["#FBF2DA","#F8FF96","#CFAAEE","#8DB1EF","#85D8C7","#FBFDDD","#A33E43"]
+    colors = ["#FBF2DA","#C0E6AD","#9CDFEB","#8DB1EF","#E79999","#FFDCA7","#CEC0FE"]
     for i, course in enumerate(courses):
         c_name = course.get('과목명', course.get('courseName', '알 수 없음'))
         prof   = course.get('담당교수', course.get('professor', ''))
